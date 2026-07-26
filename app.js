@@ -238,7 +238,7 @@
 
   function speakAlert(ev) {
     if (!('speechSynthesis' in window)) return;
-    const utter = new SpeechSynthesisUtterance(`Atenção! Chegando a hora do compromisso: ${ev.description}`);
+    const utter = new SpeechSynthesisUtterance(`Atenção! ${ev.description} está próximo.`);
     utter.lang = 'pt-BR';
     speechSynthesis.speak(utter);
   }
