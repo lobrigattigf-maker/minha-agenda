@@ -48,8 +48,11 @@
     btnCancel: document.getElementById('btn-cancel'),
     btnSave: document.getElementById('btn-save'),
     btnDelete: document.getElementById('btn-delete'),
-    btnAddCalendar: document.getElementById('btn-add-calendar'),
     toast: document.getElementById('toast'),
+    alertBanner: document.getElementById('alert-banner'),
+    alertDesc: document.getElementById('alert-banner-desc'),
+    alertTime: document.getElementById('alert-banner-time'),
+    btnAlertDismiss: document.getElementById('btn-alert-dismiss'),
   };
 
   // ---------- Mini calendar ----------
@@ -229,48 +232,43 @@
     return { day, month, year };
   }
 
-  // ---------- Export to native calendar (.ics with alarm) ----------
+  // ---------- On-screen + voice alert while app is open ----------
 
-  function escapeIcsText(text) {
-    return String(text)
-      .replace(/\\/g, '\\\\')
-      .replace(/;/g, '\\;')
-      .replace(/,/g, '\\,')
-      .replace(/\n/g, '\\n');
+  const alertedEventIds = new Set();
+
+  function speakAlert(ev) {
+    if (!('speechSynthesis' in window)) return;
+    const utter = new SpeechSynthesisUtterance(`Atenção! Chegando a hora do compromisso: ${ev.description}`);
+    utter.lang = 'pt-BR';
+    speechSynthesis.speak(utter);
   }
 
-  function buildIcsForEvent(ev) {
-    const pad = (n) => String(n).padStart(2, '0');
-    const [hour, minute] = ev.time.split(':').map(Number);
-    const dtstart = `${ev.year}${pad(ev.month)}${pad(ev.day)}T${pad(hour)}${pad(minute)}00`;
-    const dtstamp = new Date().toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
-
-    const lines = [
-      'BEGIN:VCALENDAR',
-      'VERSION:2.0',
-      'PRODID:-//Agenda PWA//PT-BR',
-      'CALSCALE:GREGORIAN',
-      'BEGIN:VEVENT',
-      `UID:${ev.id}@agenda-pwa`,
-      `DTSTAMP:${dtstamp}`,
-      `DTSTART:${dtstart}`,
-      'DURATION:PT30M',
-      `SUMMARY:${escapeIcsText(ev.description)}`,
-      'BEGIN:VALARM',
-      'ACTION:DISPLAY',
-      'DESCRIPTION:Lembrete',
-      `TRIGGER:-PT${ev.alert}M`,
-      'END:VALARM',
-      'END:VEVENT',
-      'END:VCALENDAR',
-    ];
-    return lines.join('\r\n');
+  function triggerAlert(ev) {
+    el.alertDesc.textContent = ev.description;
+    el.alertTime.textContent = `às ${ev.time}`;
+    el.alertBanner.classList.remove('hidden');
+    speakAlert(ev);
+    if (navigator.vibrate) navigator.vibrate([300, 100, 300, 100, 300]);
   }
 
-  function icsDataUriForEvent(ev) {
-    const ics = buildIcsForEvent(ev);
-    return 'data:text/calendar;charset=utf-8,' + encodeURIComponent(ics);
+  function checkUpcomingAlerts() {
+    const now = new Date();
+    events.forEach((ev) => {
+      if (alertedEventIds.has(ev.id)) return;
+      const [hour, minute] = ev.time.split(':').map(Number);
+      const eventDate = new Date(ev.year, ev.month - 1, ev.day, hour, minute);
+      const alertDate = new Date(eventDate.getTime() - ev.alert * 60000);
+      if (now >= alertDate && now < eventDate) {
+        alertedEventIds.add(ev.id);
+        triggerAlert(ev);
+      }
+    });
   }
+
+  el.btnAlertDismiss.addEventListener('click', () => {
+    el.alertBanner.classList.add('hidden');
+    if ('speechSynthesis' in window) speechSynthesis.cancel();
+  });
 
   // ---------- Modal ----------
 
@@ -282,8 +280,6 @@
     el.inputDesc.value = '';
     el.inputAlert.value = 15;
     el.btnDelete.classList.add('hidden');
-    el.btnAddCalendar.href = '#';
-    el.btnAddCalendar.classList.add('hidden');
     el.modalOverlay.classList.remove('hidden');
   }
 
@@ -297,8 +293,6 @@
     el.inputDesc.value = ev.description;
     el.inputAlert.value = ev.alert;
     el.btnDelete.classList.remove('hidden');
-    el.btnAddCalendar.href = icsDataUriForEvent(ev);
-    el.btnAddCalendar.classList.remove('hidden');
     el.modalOverlay.classList.remove('hidden');
   }
 
@@ -356,6 +350,7 @@
       if (!proceed) return;
     }
 
+    let savedId;
     if (editingEventId) {
       const ev = events.find((e) => e.id === editingEventId);
       ev.day = parsedDate.day;
@@ -364,9 +359,11 @@
       ev.time = timeStr;
       ev.description = desc;
       ev.alert = alert;
+      savedId = ev.id;
     } else {
+      savedId = String(Date.now());
       events.push({
-        id: String(Date.now()),
+        id: savedId,
         day: parsedDate.day,
         month: parsedDate.month,
         year: parsedDate.year,
@@ -377,6 +374,7 @@
       });
     }
 
+    alertedEventIds.delete(savedId);
     saveEvents();
     closeModal();
     showToast('Evento salvo ✓', 'success');
@@ -389,6 +387,7 @@
 
     renderCalendar();
     renderTimeline();
+    checkUpcomingAlerts();
   });
 
   // ---------- Toast ----------
@@ -409,6 +408,8 @@
   function init() {
     renderCalendar();
     renderTimeline();
+    checkUpcomingAlerts();
+    setInterval(checkUpcomingAlerts, 15000);
 
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('sw.js').catch(() => {});

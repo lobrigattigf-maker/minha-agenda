@@ -52,7 +52,6 @@
     <label class="field-label">Alerta (minutos antes)</label>
     <input id="input-alert" type="number" min="0" class="field-input" value="15">
 
-    <a id="btn-add-calendar" class="btn btn-calendar hidden" href="#" target="_blank" rel="noopener">📅 Adicionar ao Calendário (com alarme)</a>
     <button id="btn-delete" class="btn btn-delete hidden">Excluir evento</button>
 
     <div class="modal-buttons">
@@ -63,6 +62,15 @@
 </div>
 
 <div id="toast" class="toast hidden"></div>
+
+<div id="alert-banner" class="alert-banner hidden">
+  <div class="alert-banner-icon">⏰</div>
+  <div class="alert-banner-title">ATENÇÃO</div>
+  <div class="alert-banner-subtitle">Chegando a hora do compromisso</div>
+  <div id="alert-banner-desc" class="alert-banner-desc"></div>
+  <div id="alert-banner-time" class="alert-banner-time"></div>
+  <button id="btn-alert-dismiss" class="btn btn-save alert-banner-btn">OK</button>
+</div>
 
 <script src="app.js"></script>
 </body>
