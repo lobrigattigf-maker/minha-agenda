@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#4f46e5">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Agenda">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="manifest" href="manifest.json">
+<link rel="stylesheet" href="style.css">
+<title>Agenda</title>
+</head>
+<body>
+
+<header class="header">
+  <h1 class="header-title">📅 Agenda</h1>
+  <button id="btn-add" class="btn-add" aria-label="Novo evento">➕</button>
+</header>
+
+<section class="mini-calendar">
+  <div class="cal-nav">
+    <button id="btn-prev-month" class="cal-nav-btn" aria-label="Mês anterior">◀</button>
+    <span id="cal-month-label" class="cal-month-label"></span>
+    <button id="btn-next-month" class="cal-nav-btn" aria-label="Mês seguinte">▶</button>
+  </div>
+  <div class="cal-weekdays">
+    <span>Dom</span><span>Seg</span><span>Ter</span><span>Qua</span><span>Qui</span><span>Sex</span><span>Sab</span>
+  </div>
+  <div id="cal-grid" class="cal-grid"></div>
+</section>
+
+<main class="timeline-wrap">
+  <div id="selected-date-label" class="selected-date-label"></div>
+  <div id="timeline" class="timeline"></div>
+</main>
+
+<div id="modal-overlay" class="modal-overlay hidden">
+  <div class="modal">
+    <h2 id="modal-title" class="modal-title">Novo Evento</h2>
+
+    <label class="field-label">Data (DD MM ou DD MM AA)</label>
+    <input id="input-date" type="text" inputmode="numeric" class="field-input" placeholder="27 7 ou 27 7 26">
+
+    <label class="field-label">Hora (HH MM)</label>
+    <input id="input-time" type="text" inputmode="numeric" class="field-input" placeholder="15 30">
+
+    <label class="field-label">Descrição</label>
+    <textarea id="input-desc" class="field-textarea" placeholder="Evento..."></textarea>
+
+    <label class="field-label">Alerta (minutos antes)</label>
+    <input id="input-alert" type="number" min="0" class="field-input" value="15">
+
+    <div class="modal-buttons">
+      <button id="btn-cancel" class="btn btn-cancel">Cancelar</button>
+      <button id="btn-save" class="btn btn-save">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast" class="toast hidden"></div>
+
+<script src="app.js"></script>
+</body>
+</html>

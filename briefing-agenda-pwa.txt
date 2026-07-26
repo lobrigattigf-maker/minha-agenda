@@ -1,0 +1,425 @@
+═══════════════════════════════════════════════════════════════════════════════
+BRIEFING COMPLETO: PWA AGENDA CONTROLE PARA iPhone
+═══════════════════════════════════════════════════════════════════════════════
+
+OBJETIVO FINAL:
+Uma Progressive Web App (PWA) para iPhone que funciona como AGENDA/CALENDÁRIO 
+pessoal com entrada de eventos, timeline de horários, e armazenamento local.
+
+Nenhuma sincronização com Drive/Google Calendar nesta versão.
+Apenas localStorage no iPhone.
+
+───────────────────────────────────────────────────────────────────────────────
+1. LAYOUT & ESTRUTURA VISUAL
+───────────────────────────────────────────────────────────────────────────────
+
+A interface tem 3 seções principais:
+
+┌─────────────────────────────────────────────┐
+│ 📅 AGENDA              ➕                    │  ← HEADER (fixo no topo)
+├─────────────────────────────────────────────┤
+│ ◀ julho de 2026 ▶                           │  ← MINI-CALENDÁRIO
+│ Dom Seg Ter Qua Qui Sex Sab                 │
+│  26  27  28  29  30   1   2                 │
+│   3   4   5   6   7   8   9 (com ponto•)    │
+│  10  11 [12] 13  14  15  16 ← 12 selecionado
+│  ...                                        │
+└─────────────────────────────────────────────┘
+│                                             │
+│ sábado, 12 de julho                         │  ← DATA SELECIONADA (dinâmica)
+│                                             │
+│ 06:00                                       │  ← TIMELINE
+│ 07:00                                       │
+│ 08:00                                       │
+│ 09:00  ┌─ Reunião com cliente ─┐            │
+│        │ 09:30                  │            │
+│        │ ⏰ 15min antes         │            │
+│        └────────────────────────┘            │
+│ 10:00                                       │
+│ 11:00                                       │
+│ 12:00  ┌─ Almoço               ─┐            │
+│        │ 12:30                  │            │
+│        │ ⏰ 30min antes         │            │
+│        └────────────────────────┘            │
+│ 13:00                                       │
+│ ...até 23:00                                │
+│                                             │
+└─────────────────────────────────────────────┘
+
+COMPORTAMENTO:
+- Clica em outro dia no mini-calendário → timeline muda automaticamente
+- Dia com eventos tem um ponto vermelho (•)
+- Dia de hoje tem fundo azul (#4f46e5) e número em branco
+- Dia selecionado tem borda azul e número destacado
+
+───────────────────────────────────────────────────────────────────────────────
+2. MINI-CALENDÁRIO (topo, abaixo do header)
+───────────────────────────────────────────────────────────────────────────────
+
+DIMENSÕES:
+- Altura fixa: ~120px
+- Fundo cinza claro (#f9fafb)
+- Borda inferior cinza clara (#e5e7eb)
+
+COMPONENTES:
+a) NAVEGAÇÃO MÊS
+   - Botão ◀ (esquerda) → mês anterior
+   - Texto no centro: "julho de 2026" (tamanho 13px, peso 600)
+   - Botão ▶ (direita) → mês seguinte
+   - Botões cinzas (#f3f4f6) com ativo escuro (#e5e7eb)
+
+b) GRID 7x6 (dias da semana)
+   - Cabeçalho: Dom, Seg, Ter, Qua, Qui, Sex, Sab (tamanho 10px, peso 600, cinza)
+   - Dias: grid com gaps pequenos (1-2px)
+   - Cada dia: quadrado (aspect-ratio 1:1), mín 28px
+   - Fundo padrão: branco
+   - Dias do mês anterior/próximo: cinza claro (#d1d5db)
+   - Dia de HOJE: fundo azul (#4f46e5), texto branco, peso 700
+   - Dia SELECIONADO: borda azul 2px, peso 600
+   - Dias COM EVENTOS: ponto vermelho (#ef4444) no canto inferior
+
+INTERAÇÃO:
+- Clicar em um dia → seleciona e muda a timeline abaixo
+- Clicar em ◀ ▶ → navega entre meses (mantém seleção visual)
+
+───────────────────────────────────────────────────────────────────────────────
+3. TIMELINE (área scrollável, ocupa resto da tela)
+───────────────────────────────────────────────────────────────────────────────
+
+COMPONENTES:
+a) LABEL DA DATA SELECIONADA
+   - Topo da timeline: "sábado, 12 de julho" (tamanho 14px, peso 600)
+   - Dinâmico conforme data selecionada
+   - Espaço embaixo: 12px
+
+b) HORÁRIOS (00:00 até 23:00)
+   - Cada hora tem uma linha de slot
+   - Altura mínima: 50px por slot (se vazio) → 60-70px com eventos
+   - Estrutura: [HORA] | [EVENTOS]
+   
+   COLUNA ESQUERDA (HORA):
+   - Largura: 50px (fixo)
+   - Formato: "06:00", "07:00", "08:00"... "23:00"
+   - Tamanho: 11px, peso 600, cor cinza (#6b7280)
+   - Alinhado à direita, com padding-right 12px
+   
+   COLUNA DIREITA (EVENTOS):
+   - Flex: 1 (ocupa resto)
+   - Exibe eventos que ocorrem naquela hora
+   - Se nenhum evento: vazio (só mostra borda)
+   - Borda inferior cinza clara (#e5e7eb) separando horas
+
+c) BLOCOS DE EVENTO
+   - Background: azul claro (#f0f1f9)
+   - Borda esquerda: 3px azul (#4f46e5)
+   - Padding: 8px
+   - Border-radius: 4px
+   - Cursor: pointer (interativo)
+   - Hover/active: background mais escuro (#e5e7eb)
+   
+   CONTEÚDO DO BLOCO:
+   ┌────────────────────┐
+   │ 09:30  ← cor azul  │ (tamanho 12px, peso 600)
+   │ Reunião com cliente│ (tamanho 12px, peso 600)
+   │ ⏰ 15min antes     │ (tamanho 10px, cor cinza)
+   └────────────────────┘
+
+d) ESTADO VAZIO
+   - Se nenhum evento no dia: mensagem centralizada
+   - Texto: "Nenhum evento neste dia"
+   - Tamanho: 13px, cor cinza (#6b7280)
+
+INTERAÇÃO:
+- Clicar em um evento → abre modal para editar/deletar
+- Scrollar → navega entre horários do dia
+
+───────────────────────────────────────────────────────────────────────────────
+4. HEADER (fixo no topo)
+───────────────────────────────────────────────────────────────────────────────
+
+LAYOUT:
+- Altura: ~44px
+- Padding: 12px 16px
+- Borda inferior cinza clara (#e5e7eb)
+- Background: branco
+
+COMPONENTES:
+- À ESQUERDA: "📅 Agenda" (tamanho 18px, peso 700)
+- À DIREITA: Botão ➕ azul (#4f46e5)
+  - Padding: 8px 12px
+  - Tamanho texto: 14px
+  - Peso: 600
+  - Ativo: background mais escuro (#4338ca)
+
+INTERAÇÃO:
+- Clique em ➕ → abre modal "Novo Evento"
+
+───────────────────────────────────────────────────────────────────────────────
+5. MODAL "NOVO EVENTO" / "EDITAR EVENTO"
+───────────────────────────────────────────────────────────────────────────────
+
+APARÊNCIA:
+- Overlay: rgba(0,0,0,0.5) (escurecido)
+- Modal: sobe de baixo (slide-up animation 0.3s)
+- Width: 100%
+- Border-radius: 16px 16px 0 0 (arredondado só em cima)
+- Padding: 16px
+- Max-height: 85vh (scroll se necessário)
+
+CAMPOS:
+
+a) TITULO
+   - "Novo Evento" OU "Editar Evento"
+   - Tamanho: 18px, peso 700
+   - Margin-bottom: 14px
+
+b) DATA (DD MM ou DD MM AA)
+   - Label: "Data (DD MM ou DD MM AA)" (uppercase, 11px, cinza)
+   - Input: texto numérico
+   - Placeholder: "27 7 ou 27 7 26"
+   - Behavior: INTELIGENTE - conforme digita, formata automaticamente
+     * Digita "2" → mostra "2"
+     * Digita "27" → mostra "27"
+     * Digita "277" → mostra "27 7"
+     * Digita "27726" → mostra "27 7 26"
+   - Valida: dia 1-31, mês 1-12, ano 2 dígitos (20XX)
+   - Se não especificar ano, assume ano atual
+
+c) HORA (HH MM)
+   - Label: "Hora (HH MM)" (uppercase, 11px, cinza)
+   - Input: texto numérico
+   - Placeholder: "15 30"
+   - Behavior: INTELIGENTE - conforme digita, formata automaticamente
+     * Digita "1" → mostra "1"
+     * Digita "15" → mostra "15"
+     * Digita "153" → mostra "15 3"
+     * Digita "1530" → mostra "15 30"
+   - Valida: hora 0-23, minuto 0-59
+
+d) DESCRIÇÃO
+   - Label: "Descrição" (uppercase, 11px, cinza)
+   - Textarea (não input!)
+   - Placeholder: "Evento..."
+   - Min-height: 70px
+   - Resize: none
+
+e) ALERTA
+   - Label: "Alerta (minutos antes)" (uppercase, 11px, cinza)
+   - Input: número
+   - Valor padrão: 15
+   - Min: 0
+   - Permite valores: 0, 5, 10, 15, 20, 30, 60...
+
+BOTÕES:
+- Cancelar (background cinza #f3f4f6, texto escuro)
+- Salvar (background azul #4f46e5, texto branco)
+- Grid: 1fr 1fr, gap 10px
+- Ambos: width 100%
+
+VALIDAÇÃO:
+- Preenche todos os campos → valida
+- Data inválida (dia 32, mês 13) → toast erro: "Data inválida"
+- Hora inválida (25h, 65min) → toast erro: "Hora inválida"
+- Campos vazios → toast erro: "Preencha todos os campos"
+- Sucesso → salva e mostra toast verde: "Evento salvo ✓"
+
+───────────────────────────────────────────────────────────────────────────────
+6. ENTRADA DE DADOS
+───────────────────────────────────────────────────────────────────────────────
+
+SEM VOZ (desativada por enquanto).
+
+APENAS ENTRADA MANUAL:
+
+a) FORMATO DATA INTELIGENTE:
+   Usuário digita apenas números + espaço.
+   O app formata automaticamente:
+   
+   INPUT               FORMATA PARA        INTERPRETA COMO
+   "27 7"              "27/07"             27 de julho do ano atual
+   "27 7 26"           "27/07/26"          27 de julho de 2026
+   "1 7 27"            "01/07/27"          01 de julho de 2027
+   "3 1"               "03/01"             03 de janeiro do ano atual
+   
+   NO BACKEND (antes de salvar):
+   - Extrai números: dateParts = "27726" → [27, 7, 26]
+   - Valida: 1-31, 1-12, 0-99
+   - Converte ano: "26" → "2026"
+   - Se não tiver ano: usa new Date().getFullYear()
+
+b) FORMATO HORA INTELIGENTE:
+   Usuário digita apenas números + espaço.
+   O app formata automaticamente:
+   
+   INPUT               FORMATA PARA        INTERPRETA COMO
+   "15 30"             "15:30"             15 horas 30 minutos
+   "9 15"              "09:15"             09 horas 15 minutos
+   "14 0"              "14:00"             14 horas 00 minutos
+   
+   NO BACKEND (antes de salvar):
+   - Extrai números: timeParts = "1530" → [15, 30]
+   - Valida: 0-23 (hora), 0-59 (minuto)
+   - Formata com leading zero: "09:15", "15:30"
+
+───────────────────────────────────────────────────────────────────────────────
+7. FUNCIONALIDADES
+───────────────────────────────────────────────────────────────────────────────
+
+a) ADICIONAR EVENTO
+   - Clica ➕ no header
+   - Modal abre
+   - Preenche data, hora, descrição, alerta
+   - Clica "Salvar"
+   - Evento aparece na timeline na hora correta
+   - Mini-calendário atualiza (mostra ponto vermelho no dia)
+
+b) EDITAR EVENTO
+   - Clica em um evento na timeline
+   - Modal abre com título "Editar Evento"
+   - Campos preenchidos com dados atuais
+   - Edita o que quiser
+   - Clica "Salvar" → atualiza
+
+c) DELETAR EVENTO
+   - (FUTURO - não incluir agora, pode ser swipe or long-press depois)
+
+d) NAVEGAR DATAS
+   - Clica em ◀ ▶ no mini-calendário → muda mês
+   - Clica em um dia → seleciona e timeline muda
+   - Dia selecionado fica com borda azul
+
+e) VER EVENTOS DO DIA
+   - Timeline mostra TODAS as horas (00:00 a 23:00)
+   - Eventos aparecem no horário correto
+   - Scrollar para ver outros horários
+
+───────────────────────────────────────────────────────────────────────────────
+8. ARMAZENAMENTO
+───────────────────────────────────────────────────────────────────────────────
+
+LOCALSTORAGE APENAS:
+- Chave: "agendaEvents"
+- Tipo: JSON array
+- Estrutura do evento:
+  {
+    id: "1785094163275" (timestamp),
+    day: 27,
+    month: 7,
+    year: 2026,
+    time: "15:30",
+    description: "Reunião com cliente",
+    alert: 15,
+    completed: false
+  }
+
+- Carrega ao iniciar app
+- Salva após cada ação (novo, editar)
+- Persiste entre aberturas
+
+───────────────────────────────────────────────────────────────────────────────
+9. CORES & DESIGN
+───────────────────────────────────────────────────────────────────────────────
+
+PALETA:
+- Azul primário: #4f46e5 (botões, highlights)
+- Azul escuro (ativo): #4338ca
+- Cinza claro BG: #f9fafb
+- Cinza bordas: #e5e7eb
+- Cinza texto: #6b7280
+- Preto texto: #1f2937
+- Branco: #fff
+- Vermelho (eventos): #ef4444
+- Verde (sucesso): #10b981
+- Vermelho (erro): #ef4444
+- Preto modal (overlay): rgba(0,0,0,0.5)
+
+TIPOGRAFIA:
+- Font: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif
+- Body: 13px, line-height 1.5
+- Headers: 18-20px, weight 700
+- Labels: 11px, weight 600, uppercase
+- Inputs/Textareas: 13px
+
+ESPAÇAMENTO:
+- Padding container: 12-16px
+- Gap entre elementos: 10-12px
+- Gap entre slots: 1px
+
+ANIMAÇÕES:
+- Modal slide-up: 0.3s ease-out
+- Botão click: background instant
+- Toast aparecer: slide-up 0.3s
+- Toast desaparecer: fade-out 3s
+
+───────────────────────────────────────────────────────────────────────────────
+10. COMPORTAMENTO COMPLETO DO FLUXO
+───────────────────────────────────────────────────────────────────────────────
+
+INICIALIZA:
+1. Carrega eventos do localStorage
+2. Renderiza mini-calendário com mês atual
+3. Seleciona HOJE por padrão
+4. Renderiza timeline com eventos de HOJE
+
+USUÁRIO CLICA EM ➕:
+1. Modal abre vazio
+2. Foco no campo Data
+3. Preenche: "27 7"
+4. Preenche: "15 30"
+5. Preenche: "Reunião"
+6. Alerta padrão: 15
+7. Clica "Salvar"
+8. Valida tudo
+9. Salva no localStorage
+10. Modal fecha
+11. Mini-calendário atualiza (ponto no dia 27)
+12. Se data for hoje, timeline atualiza mostrando o novo evento
+
+USUÁRIO CLICA EM OUTRO DIA:
+1. Mini-calendário: dia anterior fica com borda, novo dia fica com borda
+2. Label de data muda: "sábado, 27 de julho"
+3. Timeline recarrega com eventos do dia 27
+4. Se tiver eventos, mostra na timeline
+5. Se não tiver, mostra "Nenhum evento neste dia"
+
+USUÁRIO CLICA EM UM EVENTO:
+1. Modal abre com título "Editar Evento"
+2. Campos preenchidos com dados atuais
+3. Faz mudanças
+4. Clica "Salvar"
+5. Valida
+6. Atualiza localStorage
+7. Modal fecha
+8. Timeline atualiza (evento pode ter mudado de hora/dia)
+9. Mini-calendário atualiza se necessário
+
+───────────────────────────────────────────────────────────────────────────────
+11. TECNOLOGIA
+───────────────────────────────────────────────────────────────────────────────
+
+- HTML5
+- CSS3 (Grid, Flexbox, media queries)
+- JavaScript vanilla (ES6+)
+- localStorage (não async)
+- Sem frameworks
+- Responsive: otimizado para iPhone (width 375-428px)
+- PWA manifest (app name, icon, colors)
+
+───────────────────────────────────────────────────────────────────────────────
+12. OBSERVAÇÕES FINAIS
+───────────────────────────────────────────────────────────────────────────────
+
+NÃO INCLUIR AGORA:
+- Sincronização Google Drive/Calendar
+- Notificações push
+- Entrada por voz
+- Dark mode
+- Deletar swipe
+
+FOCO:
+- Funcionar PERFEITO no iPhone Safari
+- Interface intuitiva
+- Entrada de dados ágil e inteligente
+- Visualização clara de eventos por horário
+
+═══════════════════════════════════════════════════════════════════════════════
