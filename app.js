@@ -47,6 +47,7 @@
     inputAlert: document.getElementById('input-alert'),
     btnCancel: document.getElementById('btn-cancel'),
     btnSave: document.getElementById('btn-save'),
+    btnDelete: document.getElementById('btn-delete'),
     toast: document.getElementById('toast'),
   };
 
@@ -162,12 +163,15 @@
       empty.className = 'empty-state';
       empty.textContent = 'Nenhum evento neste dia';
       el.timeline.appendChild(empty);
+      return;
     }
 
-    for (let hour = 0; hour <= 23; hour++) {
+    const hoursWithEvents = [...new Set(dayEvents.map((ev) => parseInt(ev.time.split(':')[0], 10)))].sort((a, b) => a - b);
+
+    hoursWithEvents.forEach((hour) => {
       const hourStr = String(hour).padStart(2, '0') + ':00';
       const slot = document.createElement('div');
-      slot.className = 'time-slot';
+      slot.className = 'time-slot has-event';
 
       const hourLabel = document.createElement('div');
       hourLabel.className = 'time-slot-hour';
@@ -178,37 +182,34 @@
       eventsCol.className = 'time-slot-events';
 
       const hourEvents = dayEvents.filter((ev) => parseInt(ev.time.split(':')[0], 10) === hour);
-      if (hourEvents.length > 0) {
-        slot.classList.add('has-event');
-        hourEvents.forEach((ev) => {
-          const block = document.createElement('div');
-          block.className = 'event-block';
+      hourEvents.forEach((ev) => {
+        const block = document.createElement('div');
+        block.className = 'event-block';
 
-          const timeEl = document.createElement('div');
-          timeEl.className = 'event-time';
-          timeEl.textContent = ev.time;
+        const timeEl = document.createElement('div');
+        timeEl.className = 'event-time';
+        timeEl.textContent = ev.time;
 
-          const descEl = document.createElement('div');
-          descEl.className = 'event-desc';
-          descEl.textContent = ev.description;
+        const descEl = document.createElement('div');
+        descEl.className = 'event-desc';
+        descEl.textContent = ev.description;
 
-          const alertEl = document.createElement('div');
-          alertEl.className = 'event-alert';
-          alertEl.textContent = `⏰ ${ev.alert}min antes`;
+        const alertEl = document.createElement('div');
+        alertEl.className = 'event-alert';
+        alertEl.textContent = `⏰ ${ev.alert}min antes`;
 
-          block.appendChild(timeEl);
-          block.appendChild(descEl);
-          block.appendChild(alertEl);
+        block.appendChild(timeEl);
+        block.appendChild(descEl);
+        block.appendChild(alertEl);
 
-          block.addEventListener('click', () => openModalForEdit(ev.id));
+        block.addEventListener('click', () => openModalForEdit(ev.id));
 
-          eventsCol.appendChild(block);
-        });
-      }
+        eventsCol.appendChild(block);
+      });
 
       slot.appendChild(eventsCol);
       el.timeline.appendChild(slot);
-    }
+    });
   }
 
   // ---------- Native date/time helpers ----------
@@ -236,6 +237,7 @@
     el.inputTime.value = '';
     el.inputDesc.value = '';
     el.inputAlert.value = 15;
+    el.btnDelete.classList.add('hidden');
     el.modalOverlay.classList.remove('hidden');
   }
 
@@ -248,6 +250,7 @@
     el.inputTime.value = ev.time;
     el.inputDesc.value = ev.description;
     el.inputAlert.value = ev.alert;
+    el.btnDelete.classList.remove('hidden');
     el.modalOverlay.classList.remove('hidden');
   }
 
@@ -261,6 +264,18 @@
 
   el.modalOverlay.addEventListener('click', (e) => {
     if (e.target === el.modalOverlay) closeModal();
+  });
+
+  el.btnDelete.addEventListener('click', () => {
+    if (!editingEventId) return;
+    if (!confirm('Excluir este evento?')) return;
+
+    events = events.filter((e) => e.id !== editingEventId);
+    saveEvents();
+    closeModal();
+    showToast('Evento excluído', 'success');
+    renderCalendar();
+    renderTimeline();
   });
 
   el.btnSave.addEventListener('click', () => {
@@ -278,6 +293,19 @@
     if (!parsedDate) {
       showToast('Data inválida', 'error');
       return;
+    }
+
+    const conflict = events.find(
+      (ev) =>
+        ev.id !== editingEventId &&
+        ev.day === parsedDate.day &&
+        ev.month === parsedDate.month &&
+        ev.year === parsedDate.year &&
+        ev.time === timeStr
+    );
+    if (conflict) {
+      const proceed = confirm(`Já existe um evento às ${timeStr} nesse dia: "${conflict.description}".\n\nDeseja salvar mesmo assim?`);
+      if (!proceed) return;
     }
 
     if (editingEventId) {

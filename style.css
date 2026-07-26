@@ -327,6 +327,21 @@ body {
   background: #4338ca;
 }
 
+.btn-delete {
+  background: #fff;
+  color: #ef4444;
+  border: 1px solid #ef4444;
+  margin-top: 16px;
+}
+
+.btn-delete:active {
+  background: #fef2f2;
+}
+
+.btn-delete.hidden {
+  display: none;
+}
+
 /* TOAST */
 .toast {
   position: fixed;
