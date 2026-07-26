@@ -52,7 +52,8 @@
     alertBanner: document.getElementById('alert-banner'),
     alertDesc: document.getElementById('alert-banner-desc'),
     alertTime: document.getElementById('alert-banner-time'),
-    btnAlertDismiss: document.getElementById('btn-alert-dismiss'),
+    btnAlertRepeat: document.getElementById('btn-alert-repeat'),
+    btnAlertConfirm: document.getElementById('btn-alert-confirm'),
   };
 
   // ---------- Mini calendar ----------
@@ -234,7 +235,11 @@
 
   // ---------- On-screen + voice alert while app is open ----------
 
-  const alertedEventIds = new Set();
+  const REPEAT_INTERVAL_MS = 2 * 60000; // repeat 2 minutes after "Repetir depois"
+
+  const confirmedAlertIds = new Set();
+  const nextAlertTime = {}; // eventId -> timestamp of next allowed alert
+  let currentAlertEventId = null;
 
   function speakAlert(ev) {
     if (!('speechSynthesis' in window)) return;
@@ -244,6 +249,7 @@
   }
 
   function triggerAlert(ev) {
+    currentAlertEventId = ev.id;
     el.alertDesc.textContent = ev.description;
     el.alertTime.textContent = `às ${ev.time}`;
     el.alertBanner.classList.remove('hidden');
@@ -252,23 +258,37 @@
   }
 
   function checkUpcomingAlerts() {
-    const now = new Date();
-    events.forEach((ev) => {
-      if (alertedEventIds.has(ev.id)) return;
+    if (currentAlertEventId) return; // banner already showing, wait for user action
+
+    const now = Date.now();
+    const due = events.find((ev) => {
+      if (confirmedAlertIds.has(ev.id)) return false;
       const [hour, minute] = ev.time.split(':').map(Number);
-      const eventDate = new Date(ev.year, ev.month - 1, ev.day, hour, minute);
-      const alertDate = new Date(eventDate.getTime() - ev.alert * 60000);
-      if (now >= alertDate && now < eventDate) {
-        alertedEventIds.add(ev.id);
-        triggerAlert(ev);
-      }
+      const eventTime = new Date(ev.year, ev.month - 1, ev.day, hour, minute).getTime();
+      const firstAlertTime = eventTime - ev.alert * 60000;
+      const readyTime = nextAlertTime[ev.id] || firstAlertTime;
+      return now >= readyTime;
     });
+
+    if (due) triggerAlert(due);
   }
 
-  el.btnAlertDismiss.addEventListener('click', () => {
+  function dismissAlert(repeat) {
+    if (!currentAlertEventId) return;
+    if (repeat) {
+      nextAlertTime[currentAlertEventId] = Date.now() + REPEAT_INTERVAL_MS;
+    } else {
+      confirmedAlertIds.add(currentAlertEventId);
+      delete nextAlertTime[currentAlertEventId];
+    }
+    currentAlertEventId = null;
     el.alertBanner.classList.add('hidden');
     if ('speechSynthesis' in window) speechSynthesis.cancel();
-  });
+    checkUpcomingAlerts();
+  }
+
+  el.btnAlertRepeat.addEventListener('click', () => dismissAlert(true));
+  el.btnAlertConfirm.addEventListener('click', () => dismissAlert(false));
 
   // ---------- Modal ----------
 
@@ -313,6 +333,8 @@
     if (!confirm('Excluir este evento?')) return;
 
     events = events.filter((e) => e.id !== editingEventId);
+    confirmedAlertIds.add(editingEventId);
+    delete nextAlertTime[editingEventId];
     saveEvents();
     closeModal();
     showToast('Evento excluído', 'success');
@@ -374,7 +396,8 @@
       });
     }
 
-    alertedEventIds.delete(savedId);
+    confirmedAlertIds.delete(savedId);
+    delete nextAlertTime[savedId];
     saveEvents();
     closeModal();
     showToast('Evento salvo ✓', 'success');

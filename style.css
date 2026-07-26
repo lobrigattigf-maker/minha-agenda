@@ -399,9 +399,22 @@ body {
   opacity: 0.9;
 }
 
-.alert-banner-btn {
+.alert-banner-buttons {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
   margin-top: 32px;
-  max-width: 240px;
+  width: 100%;
+  max-width: 320px;
+}
+
+.alert-banner-btn-repeat {
+  background: rgba(255, 255, 255, 0.15);
+  color: #fff;
+  border: 1px solid #fff;
+}
+
+.alert-banner-btn-confirm {
   background: #fff;
   color: #b91c1c;
 }
