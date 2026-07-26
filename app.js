@@ -211,78 +211,20 @@
     }
   }
 
-  // ---------- Smart input formatting ----------
+  // ---------- Native date/time helpers ----------
 
-  function formatSmartDate(raw) {
-    const digits = raw.replace(/\D/g, '').slice(0, 6);
-    if (digits.length <= 2) return digits;
-    if (digits.length <= 4) return `${digits.slice(0, 2)} ${digits.slice(2)}`;
-    const month = digits.slice(2, digits.length - 2);
-    const year = digits.slice(digits.length - 2);
-    return `${digits.slice(0, 2)} ${month} ${year}`;
+  function toIsoDate(day, month, year) {
+    return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
   }
 
-  function formatSmartTime(raw) {
-    const digits = raw.replace(/\D/g, '').slice(0, 4);
-    if (digits.length <= 2) return digits;
-    return `${digits.slice(0, 2)} ${digits.slice(2)}`;
-  }
-
-  el.inputDate.addEventListener('input', (e) => {
-    e.target.value = formatSmartDate(e.target.value);
-  });
-
-  el.inputTime.addEventListener('input', (e) => {
-    e.target.value = formatSmartTime(e.target.value);
-  });
-
-  function parseSmartDate(raw) {
-    const digits = raw.replace(/\D/g, '').slice(0, 6);
-    if (digits.length < 3) return null;
-
-    const day = parseInt(digits.slice(0, 2), 10);
-    let month, year;
-    if (digits.length <= 4) {
-      // "277" -> day 27, month 7 (year not typed yet, defaults to current year)
-      month = parseInt(digits.slice(2), 10);
-      year = new Date().getFullYear();
-    } else {
-      // last 2 digits are always the year; whatever is between day and year is the month
-      month = parseInt(digits.slice(2, digits.length - 2), 10);
-      const yy = parseInt(digits.slice(digits.length - 2), 10);
-      year = 2000 + yy;
-    }
-
-    if (isNaN(day) || isNaN(month) || month < 1) return null;
+  function parseIsoDate(iso) {
+    const parts = iso.split('-');
+    if (parts.length !== 3) return null;
+    const year = parseInt(parts[0], 10);
+    const month = parseInt(parts[1], 10);
+    const day = parseInt(parts[2], 10);
+    if (isNaN(year) || isNaN(month) || isNaN(day)) return null;
     return { day, month, year };
-  }
-
-  function parseSmartTime(raw) {
-    const digits = raw.replace(/\D/g, '');
-    if (digits.length < 2) return null;
-
-    let hour, minute;
-    if (digits.length <= 2) {
-      hour = parseInt(digits, 10);
-      minute = 0;
-    } else {
-      hour = parseInt(digits.slice(0, 2), 10);
-      minute = parseInt(digits.slice(2), 10);
-    }
-
-    if (isNaN(hour) || isNaN(minute)) return null;
-    return { hour, minute };
-  }
-
-  function isValidDate(day, month, year) {
-    if (month < 1 || month > 12) return false;
-    if (day < 1 || day > 31) return false;
-    const daysInMonth = new Date(year, month, 0).getDate();
-    return day <= daysInMonth;
-  }
-
-  function isValidTime(hour, minute) {
-    return hour >= 0 && hour <= 23 && minute >= 0 && minute <= 59;
   }
 
   // ---------- Modal ----------
@@ -290,12 +232,11 @@
   function openModalForAdd() {
     editingEventId = null;
     el.modalTitle.textContent = 'Novo Evento';
-    el.inputDate.value = '';
+    el.inputDate.value = toIsoDate(selectedDay, selectedMonth + 1, selectedYear);
     el.inputTime.value = '';
     el.inputDesc.value = '';
     el.inputAlert.value = 15;
     el.modalOverlay.classList.remove('hidden');
-    el.inputDate.focus();
   }
 
   function openModalForEdit(id) {
@@ -303,9 +244,8 @@
     if (!ev) return;
     editingEventId = id;
     el.modalTitle.textContent = 'Editar Evento';
-    const yy = String(ev.year).slice(-2);
-    el.inputDate.value = `${String(ev.day).padStart(2, '0')} ${ev.month} ${yy}`;
-    el.inputTime.value = ev.time.replace(':', ' ');
+    el.inputDate.value = toIsoDate(ev.day, ev.month, ev.year);
+    el.inputTime.value = ev.time;
     el.inputDesc.value = ev.description;
     el.inputAlert.value = ev.alert;
     el.modalOverlay.classList.remove('hidden');
@@ -324,29 +264,21 @@
   });
 
   el.btnSave.addEventListener('click', () => {
-    const dateRaw = el.inputDate.value.trim();
-    const timeRaw = el.inputTime.value.trim();
+    const dateRaw = el.inputDate.value;
+    const timeStr = el.inputTime.value;
     const desc = el.inputDesc.value.trim();
     const alert = parseInt(el.inputAlert.value, 10);
 
-    if (!dateRaw || !timeRaw || !desc || isNaN(alert)) {
+    if (!dateRaw || !timeStr || !desc || isNaN(alert)) {
       showToast('Preencha todos os campos', 'error');
       return;
     }
 
-    const parsedDate = parseSmartDate(dateRaw);
-    if (!parsedDate || !isValidDate(parsedDate.day, parsedDate.month, parsedDate.year)) {
+    const parsedDate = parseIsoDate(dateRaw);
+    if (!parsedDate) {
       showToast('Data inválida', 'error');
       return;
     }
-
-    const parsedTime = parseSmartTime(timeRaw);
-    if (!parsedTime || !isValidTime(parsedTime.hour, parsedTime.minute)) {
-      showToast('Hora inválida', 'error');
-      return;
-    }
-
-    const timeStr = `${String(parsedTime.hour).padStart(2, '0')}:${String(parsedTime.minute).padStart(2, '0')}`;
 
     if (editingEventId) {
       const ev = events.find((e) => e.id === editingEventId);
