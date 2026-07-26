@@ -241,6 +241,18 @@
   const nextAlertTime = {}; // eventId -> timestamp of next allowed alert
   let currentAlertEventId = null;
 
+  // iOS only allows speech synthesis after a real user tap has "unlocked" it once
+  let speechUnlocked = false;
+  function unlockSpeech() {
+    if (speechUnlocked || !('speechSynthesis' in window)) return;
+    speechUnlocked = true;
+    const unlockUtter = new SpeechSynthesisUtterance(' ');
+    unlockUtter.volume = 0;
+    speechSynthesis.speak(unlockUtter);
+  }
+  document.addEventListener('touchend', unlockSpeech, { once: true });
+  document.addEventListener('click', unlockSpeech, { once: true });
+
   function speakAlert(ev) {
     if (!('speechSynthesis' in window)) return;
     const utter = new SpeechSynthesisUtterance(`Atenção! ${ev.description} está próximo.`);
