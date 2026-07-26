@@ -48,6 +48,7 @@
     btnCancel: document.getElementById('btn-cancel'),
     btnSave: document.getElementById('btn-save'),
     btnDelete: document.getElementById('btn-delete'),
+    btnAddCalendar: document.getElementById('btn-add-calendar'),
     toast: document.getElementById('toast'),
   };
 
@@ -228,6 +229,55 @@
     return { day, month, year };
   }
 
+  // ---------- Export to native calendar (.ics with alarm) ----------
+
+  function escapeIcsText(text) {
+    return String(text)
+      .replace(/\\/g, '\\\\')
+      .replace(/;/g, '\\;')
+      .replace(/,/g, '\\,')
+      .replace(/\n/g, '\\n');
+  }
+
+  function buildIcsForEvent(ev) {
+    const pad = (n) => String(n).padStart(2, '0');
+    const [hour, minute] = ev.time.split(':').map(Number);
+    const dtstart = `${ev.year}${pad(ev.month)}${pad(ev.day)}T${pad(hour)}${pad(minute)}00`;
+    const dtstamp = new Date().toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+
+    const lines = [
+      'BEGIN:VCALENDAR',
+      'VERSION:2.0',
+      'PRODID:-//Agenda PWA//PT-BR',
+      'CALSCALE:GREGORIAN',
+      'BEGIN:VEVENT',
+      `UID:${ev.id}@agenda-pwa`,
+      `DTSTAMP:${dtstamp}`,
+      `DTSTART:${dtstart}`,
+      'DURATION:PT30M',
+      `SUMMARY:${escapeIcsText(ev.description)}`,
+      'BEGIN:VALARM',
+      'ACTION:DISPLAY',
+      'DESCRIPTION:Lembrete',
+      `TRIGGER:-PT${ev.alert}M`,
+      'END:VALARM',
+      'END:VEVENT',
+      'END:VCALENDAR',
+    ];
+    return lines.join('\r\n');
+  }
+
+  function downloadIcsForEvent(ev) {
+    const ics = buildIcsForEvent(ev);
+    const dataUri = 'data:text/calendar;charset=utf-8,' + encodeURIComponent(ics);
+    const link = document.createElement('a');
+    link.href = dataUri;
+    link.download = 'evento.ics';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }
+
   // ---------- Modal ----------
 
   function openModalForAdd() {
@@ -238,6 +288,7 @@
     el.inputDesc.value = '';
     el.inputAlert.value = 15;
     el.btnDelete.classList.add('hidden');
+    el.btnAddCalendar.classList.add('hidden');
     el.modalOverlay.classList.remove('hidden');
   }
 
@@ -251,6 +302,7 @@
     el.inputDesc.value = ev.description;
     el.inputAlert.value = ev.alert;
     el.btnDelete.classList.remove('hidden');
+    el.btnAddCalendar.classList.remove('hidden');
     el.modalOverlay.classList.remove('hidden');
   }
 
@@ -264,6 +316,13 @@
 
   el.modalOverlay.addEventListener('click', (e) => {
     if (e.target === el.modalOverlay) closeModal();
+  });
+
+  el.btnAddCalendar.addEventListener('click', () => {
+    if (!editingEventId) return;
+    const ev = events.find((e) => e.id === editingEventId);
+    if (!ev) return;
+    downloadIcsForEvent(ev);
   });
 
   el.btnDelete.addEventListener('click', () => {
