@@ -267,15 +267,9 @@
     return lines.join('\r\n');
   }
 
-  function downloadIcsForEvent(ev) {
+  function icsDataUriForEvent(ev) {
     const ics = buildIcsForEvent(ev);
-    const dataUri = 'data:text/calendar;charset=utf-8,' + encodeURIComponent(ics);
-    const link = document.createElement('a');
-    link.href = dataUri;
-    link.download = 'evento.ics';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    return 'data:text/calendar;charset=utf-8,' + encodeURIComponent(ics);
   }
 
   // ---------- Modal ----------
@@ -288,6 +282,7 @@
     el.inputDesc.value = '';
     el.inputAlert.value = 15;
     el.btnDelete.classList.add('hidden');
+    el.btnAddCalendar.href = '#';
     el.btnAddCalendar.classList.add('hidden');
     el.modalOverlay.classList.remove('hidden');
   }
@@ -302,6 +297,7 @@
     el.inputDesc.value = ev.description;
     el.inputAlert.value = ev.alert;
     el.btnDelete.classList.remove('hidden');
+    el.btnAddCalendar.href = icsDataUriForEvent(ev);
     el.btnAddCalendar.classList.remove('hidden');
     el.modalOverlay.classList.remove('hidden');
   }
@@ -316,13 +312,6 @@
 
   el.modalOverlay.addEventListener('click', (e) => {
     if (e.target === el.modalOverlay) closeModal();
-  });
-
-  el.btnAddCalendar.addEventListener('click', () => {
-    if (!editingEventId) return;
-    const ev = events.find((e) => e.id === editingEventId);
-    if (!ev) return;
-    downloadIcsForEvent(ev);
   });
 
   el.btnDelete.addEventListener('click', () => {

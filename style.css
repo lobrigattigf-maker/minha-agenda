@@ -311,6 +311,9 @@ body {
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
+  display: block;
+  text-align: center;
+  text-decoration: none;
 }
 
 .btn-cancel {
